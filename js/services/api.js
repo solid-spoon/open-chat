@@ -756,7 +756,7 @@ async function generate(chat) {
       finishThinking(g);
       g.msg.toolCalls = calls;
       g.msg.toolResults = [];
-      persist();
+      persist(chat);
       if (chat.id === activeId) renderThread();
       for (const call of calls) {
         const result = await executeTool(call, g.ctl.signal, g.msg);
@@ -765,7 +765,7 @@ async function generate(chat) {
           content: JSON.stringify(result),
         });
       }
-      persist();
+      persist(chat);
       if (chat.id === activeId) renderThread();
       rounds += 1;
       const next = { id: uid(), role: "assistant", content: "", meta: null };
@@ -834,7 +834,7 @@ function finalize(opts = {}) {
     };
   }
   chat.updatedAt = Date.now();
-  persist();
+  persist(chat);
   renderSidebar();
   setSendState(false);
   if (chat.id === activeId) {
@@ -880,7 +880,7 @@ async function send() {
   input.value = "";
   autosize();
   updateSendState();
-  persist();
+  persist(chat);
   renderSidebar();
   renderThread();
   updateLayout();
@@ -901,7 +901,7 @@ function regenerate() {
     chat.messages.pop();
   }
   hideError();
-  persist();
+  persist(chat);
   renderThread();
   generate(chat);
 }

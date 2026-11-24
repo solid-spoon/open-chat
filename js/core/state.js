@@ -1,11 +1,8 @@
 "use strict";
 
 /* ================= State ================= */
-let chats = loadChats();
-let activeId = (() => {
-  const v = store.get(localStorage, LS.active);
-  return v && chats.some((c) => c.id === v) ? v : null;
-})();
+let chats = [];
+let activeId = null;
 let model = (() => {
   const v = store.get(localStorage, LS.model);
   return MODELS.some((m) => m.id === v) ? v : MODELS[0] ? MODELS[0].id : "";
@@ -25,14 +22,11 @@ let lastSave = 0,
 
 const getActive = () => chats.find((c) => c.id === activeId) || null;
 
-function loadChats() {
-  try {
-    const raw = store.get(localStorage, LS.chats);
-    if (!raw) return [];
-    return normalizeChats(JSON.parse(raw));
-  } catch {
-    return [];
-  }
+async function initializeChatState() {
+  chats = normalizeChats(await loadChatsFromDatabase());
+  const storedActive = store.get(localStorage, LS.active);
+  activeId = chats.some((chat) => chat.id === storedActive) ? storedActive : null;
+  if (!activeId && chats.length) activeId = chats[0].id;
 }
 function normalizeAttachment(a) {
   if (!a || typeof a !== "object") return null;
@@ -51,6 +45,7 @@ function normalizeAttachment(a) {
         : "";
     return {
       id: typeof a.id === "string" && a.id ? a.id : uid(),
+      ...(typeof a.storageId === "string" ? { storageId: a.storageId } : {}),
       kind,
       name,
       size,
@@ -65,6 +60,7 @@ function normalizeAttachment(a) {
   const text = typeof a.text === "string" ? a.text : "";
   return {
     id: typeof a.id === "string" && a.id ? a.id : uid(),
+    ...(typeof a.storageId === "string" ? { storageId: a.storageId } : {}),
     kind,
     name,
     size,
@@ -78,12 +74,8 @@ function normalizeChats(arr) {
   if (!Array.isArray(arr)) return [];
   return arr
     .filter((c) => c && Array.isArray(c.messages))
-    .map((c) => ({
-      id: typeof c.id === "string" && c.id ? c.id : uid(),
-      title: typeof c.title === "string" ? c.title : "",
-      createdAt: +c.createdAt || Date.now(),
-      updatedAt: +c.updatedAt || Date.now(),
-      messages: c.messages
+    .map((c) => {
+      const messages = (c.messages || [])
         .filter(
           (m) =>
             m &&
@@ -94,119 +86,77 @@ function normalizeChats(arr) {
           const attachments = Array.isArray(m.attachments)
             ? m.attachments.map(normalizeAttachment).filter(Boolean)
             : [];
-          const createdFiles = normalizeCreatedFiles(
-            m.createdFiles,
-            m.toolCalls,
-          );
-          return {
+          const createdFiles = normalizeCreatedFiles(m.createdFiles, m.toolCalls);
+          const result = {
             id: m.id || uid(),
             role: m.role,
             content: m.content,
             meta: m.meta && typeof m.meta === "object" ? m.meta : null,
-            ...(typeof m.reasoning === "string"
-              ? { reasoning: m.reasoning }
-              : {}),
-            ...(Number.isFinite(+m.reasoningMs)
-              ? { reasoningMs: +m.reasoningMs }
-              : {}),
-            ...(["none", "low", "medium", "high"].includes(m.reasoningEffort)
-              ? { reasoningEffort: m.reasoningEffort }
-              : {}),
-            ...(createdFiles.length ? { createdFiles } : {}),
-            ...(Array.isArray(m.toolCalls)
-              ? {
-                  toolCalls: m.toolCalls
-                    .filter(
-                      (call) =>
-                        call &&
-                        typeof call.id === "string" &&
-                        call.function &&
-                        typeof call.function.name === "string" &&
-                        typeof call.function.arguments === "string",
-                    )
-                    .map((call) => ({
-                      id: call.id,
-                      type: "function",
-                      function: {
-                        name: call.function.name,
-                        arguments: call.function.arguments,
-                      },
-                    })),
-                }
-              : {}),
-            ...(Array.isArray(m.toolResults)
-              ? {
-                  toolResults: m.toolResults
-                    .filter(
-                      (result) =>
-                        result &&
-                        typeof result.tool_call_id === "string" &&
-                        typeof result.content === "string",
-                    )
-                    .map((result) => ({
-                      tool_call_id: result.tool_call_id,
-                      content: result.content,
-                    })),
-                }
-              : {}),
-            ...(attachments.length ? { attachments } : {}),
           };
-        }),
-    }));
-}
-function slimChatsForStorage() {
-  return chats.map((c) => ({
-    ...c,
-    messages: c.messages.map((m) => {
-      if (!m.attachments || !m.attachments.length) return slimCreatedFiles(m);
+          if (typeof m.reasoning === "string") result.reasoning = m.reasoning;
+          if (Number.isFinite(+m.reasoningMs)) result.reasoningMs = +m.reasoningMs;
+          if (["none", "low", "medium", "high"].includes(m.reasoningEffort))
+            result.reasoningEffort = m.reasoningEffort;
+          if (createdFiles.length) result.createdFiles = createdFiles;
+          if (Array.isArray(m.toolCalls)) {
+            result.toolCalls = m.toolCalls
+              .filter(
+                (call) =>
+                  call &&
+                  typeof call.id === "string" &&
+                  call.function &&
+                  typeof call.function.name === "string" &&
+                  typeof call.function.arguments === "string",
+              )
+              .map((call) => ({
+                id: call.id,
+                type: "function",
+                function: {
+                  name: call.function.name,
+                  arguments: call.function.arguments,
+                },
+              }));
+          }
+          if (Array.isArray(m.toolResults)) {
+            result.toolResults = m.toolResults
+              .filter(
+                (result) =>
+                  result &&
+                  typeof result.tool_call_id === "string" &&
+                  typeof result.content === "string",
+              )
+              .map((result) => ({
+                tool_call_id: result.tool_call_id,
+                content: result.content,
+              }));
+          }
+          if (attachments.length) result.attachments = attachments;
+          return result;
+        });
       return {
-        ...slimCreatedFiles(m),
-        attachments: m.attachments.map((a) => {
-          if (a.kind === "image")
-            return { ...a, dataUrl: a.thumb || "", truncated: true };
-          return { ...a, text: "", truncated: true };
-        }),
+        id: typeof c.id === "string" && c.id ? c.id : uid(),
+        title: typeof c.title === "string" && c.title ? c.title : "New chat",
+        createdAt: +c.createdAt || Date.now(),
+        updatedAt: +c.updatedAt || Date.now(),
+        messages,
       };
-    }),
-  }));
+    });
 }
-function slimCreatedFiles(message) {
-  if (!Array.isArray(message.createdFiles) || !message.createdFiles.length)
-    return message;
-  return {
-    ...message,
-    createdFiles: message.createdFiles.map(
-      ({ files, ...artifact }) => artifact,
-    ),
-  };
-}
-function chatsForStorage() {
-  return chats.map((chat) => ({
-    ...chat,
-    messages: chat.messages.map(slimCreatedFiles),
-  }));
-}
-function persist() {
+function persist(chat = null) {
   lastSave = Date.now();
-  let ok = store.set(localStorage, LS.chats, JSON.stringify(chatsForStorage()));
-  if (!ok) {
-    ok = store.set(
-      localStorage,
-      LS.chats,
-      JSON.stringify(slimChatsForStorage()),
-    );
-  }
-  store.set(localStorage, LS.active, activeId || "");
-  if (!ok && !storageWarned) {
+  try {
+    localStorage.setItem("llmchat.active.v1", activeId || "");
+  } catch {}
+  const target = chat || (generating && generating.chat) || getActive();
+  if (!target) return;
+  saveChat(target).catch((error) => {
+    if (storageWarned) return;
     storageWarned = true;
-    showError(
-      "Could not save chat history: browser storage is unavailable or full.",
-      false,
-    );
-  }
+    showError(`Could not save chat history: ${error.message || error}`, false);
+  });
 }
 function throttledPersist() {
-  if (Date.now() - lastSave > 800) persist();
+  if (Date.now() - lastSave > 800) persist(generating && generating.chat);
 }
 
 function makeTitle(text) {

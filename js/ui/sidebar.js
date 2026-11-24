@@ -118,7 +118,7 @@ function startRename(id) {
     const value = field.value.trim();
     if (save && value && value !== chat.title) {
       chat.title = value;
-      persist();
+       persist(chat);
     }
     renderSidebar();
   };
@@ -200,6 +200,7 @@ function openConfirm(id) {
 function deleteChat(id) {
   if (generating && generating.chatId === id) stop();
   chats = chats.filter((c) => c.id !== id);
+  deleteChatFromDatabase(id).catch((error) => showError(`Could not delete chat: ${error.message || error}`, false));
   if (activeId === id) {
     const next = [...chats].sort((a, b) => b.updatedAt - a.updatedAt)[0];
     activeId = next ? next.id : null;

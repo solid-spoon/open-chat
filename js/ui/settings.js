@@ -8,8 +8,7 @@ const getKey = (provider = getActiveProvider()) => {
       : "";
   if (own) return own;
   return (
-    store.get(localStorage, LS.key) ||
-    store.get(sessionStorage, LS.key) ||
+    store.get(localStorage, "llmchat.key.v1") ||
     ""
   ).trim();
 };
@@ -141,11 +140,11 @@ function deleteProviderProfile() {
   });
 }
 
-const getSystemPrompt = () => (store.get(localStorage, LS.system) || "").trim();
+const getSystemPrompt = () => (store.get(localStorage, "llmchat.system.v1") || "").trim();
 function saveSystemPrompt() {
   const value = systemPromptInput.value;
-  if (value.trim()) store.set(localStorage, LS.system, value);
-  else store.del(localStorage, LS.system);
+  if (value.trim()) store.set(localStorage, "llmchat.system.v1", value);
+  else store.del(localStorage, "llmchat.system.v1");
   updatePresetState();
 }
 function updatePresetState() {
@@ -159,12 +158,12 @@ function updatePresetState() {
 }
 
 const TOOL_PREFERENCES = [
-  { input: runJsEnabled, key: LS.toolRunJs, legacy: LS.runJs },
-  { input: createFilesEnabled, key: LS.toolCreateFiles, legacy: LS.runJs },
-  { input: wikipediaSearchEnabled, key: LS.toolWikipediaSearch, legacy: LS.wikipedia },
-  { input: wikipediaReadEnabled, key: LS.toolWikipediaRead, legacy: LS.wikipedia },
-  { input: storageSearchEnabled, key: LS.toolStorageSearch, legacy: LS.storage },
-  { input: storageReadEnabled, key: LS.toolStorageRead, legacy: LS.storage },
+  { input: runJsEnabled, key: "llmchat.tool.run-js.v1", legacy: "llmchat.run-js.v1" },
+  { input: createFilesEnabled, key: "llmchat.tool.create-files.v1", legacy: "llmchat.run-js.v1" },
+  { input: wikipediaSearchEnabled, key: "llmchat.tool.wikipedia-search.v1", legacy: "llmchat.wikipedia.v1" },
+  { input: wikipediaReadEnabled, key: "llmchat.tool.wikipedia-read.v1", legacy: "llmchat.wikipedia.v1" },
+  { input: storageSearchEnabled, key: "llmchat.tool.storage-search.v1", legacy: "llmchat.storage.v1" },
+  { input: storageReadEnabled, key: "llmchat.tool.storage-read.v1", legacy: "llmchat.storage.v1" },
 ];
 
 function toolPreferenceEnabled(key) {
@@ -185,11 +184,11 @@ function loadSettingsControls() {
   TOOL_PREFERENCES.forEach(({ input, key }) => {
     input.checked = toolPreferenceEnabled(key);
   });
-  temperatureSetting.value = readPreference(LS.temperature);
-  maxOutputTokensSetting.value = readPreference(LS.maxOutputTokens);
-  contextHistoryLimitSetting.value = readPreference(LS.contextHistoryLimit);
-  workerTimeoutSetting.value = readPreference(LS.workerTimeout, "5000");
-  maxToolRoundsSetting.value = readPreference(LS.maxToolRounds, "6");
+  temperatureSetting.value = readPreference("llmchat.generation.temperature.v1");
+  maxOutputTokensSetting.value = readPreference("llmchat.generation.max-output-tokens.v1");
+  contextHistoryLimitSetting.value = readPreference("llmchat.generation.context-history-limit.v1");
+  workerTimeoutSetting.value = readPreference("llmchat.tool.worker-timeout.v1", "5000");
+  maxToolRoundsSetting.value = readPreference("llmchat.tool.max-rounds.v1", "6");
 }
 function bindNumericPreference(input, key, { min, max, integer = false } = {}) {
   const save = () => {
@@ -239,8 +238,9 @@ function openSettings() {
   settingsModal.hidden = false;
   renderProviderSettings();
   initKey();
-  systemPromptInput.value = store.get(localStorage, LS.system) || "";
+  systemPromptInput.value = store.get(localStorage, "llmchat.system.v1") || "";
   loadSettingsControls();
+  activateSettingsTab("providers");
   updatePresetState();
   setSettingsStatus("");
   if (isMobile()) setNav(false, false);
@@ -256,15 +256,15 @@ function closeSettings() {
 }
 function initSettings() {
   initKey();
-  systemPromptInput.value = store.get(localStorage, LS.system) || "";
+  systemPromptInput.value = store.get(localStorage, "llmchat.system.v1") || "";
   loadSettingsControls();
   updatePresetState();
 }
 
 settingsBtn.addEventListener("click", openSettings);
 settingsClose.addEventListener("click", closeSettings);
-settingsModal.addEventListener("click", (e) => {
-  if (e.target === settingsModal) closeSettings();
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) closeSettings();
 });
 apiKeyInput.addEventListener("input", saveKey);
 rememberKey.addEventListener("change", saveKey);
@@ -277,40 +277,35 @@ keyEye.addEventListener("click", () => {
 });
 systemPromptInput.addEventListener("input", saveSystemPrompt);
 TOOL_PREFERENCES.forEach(({ input, key }) =>
-  input.addEventListener("change", () =>
-    setPreference(key, input.checked ? "1" : "0"),
-  ),
+  input.addEventListener("change", () => setPreference(key, input.checked ? "1" : "0")),
 );
-bindNumericPreference(temperatureSetting, LS.temperature, { min: 0, max: 2 });
-bindNumericPreference(maxOutputTokensSetting, LS.maxOutputTokens, {
+bindNumericPreference(temperatureSetting, "llmchat.generation.temperature.v1", { min: 0, max: 2 });
+bindNumericPreference(maxOutputTokensSetting, "llmchat.generation.max-output-tokens.v1", {
   min: 1,
   integer: true,
 });
-bindNumericPreference(contextHistoryLimitSetting, LS.contextHistoryLimit, {
+bindNumericPreference(contextHistoryLimitSetting, "llmchat.generation.context-history-limit.v1", {
   min: 0,
   integer: true,
 });
-bindNumericPreference(workerTimeoutSetting, LS.workerTimeout, {
+bindNumericPreference(workerTimeoutSetting, "llmchat.tool.worker-timeout.v1", {
   min: 100,
   max: 120000,
   integer: true,
 });
-bindNumericPreference(maxToolRoundsSetting, LS.maxToolRounds, {
+bindNumericPreference(maxToolRoundsSetting, "llmchat.tool.max-rounds.v1", {
   min: 1,
   max: 50,
   integer: true,
 });
 document.querySelectorAll("[data-settings-tab]").forEach((tab) => {
-  tab.addEventListener("click", () =>
-    activateSettingsTab(tab.dataset.settingsTab),
-  );
+  tab.addEventListener("click", () => activateSettingsTab(tab.dataset.settingsTab));
   tab.addEventListener("keydown", (event) => {
     const tabs = Array.from(document.querySelectorAll("[data-settings-tab]"));
     const index = tabs.indexOf(tab);
     let next = null;
     if (event.key === "ArrowRight") next = tabs[(index + 1) % tabs.length];
-    else if (event.key === "ArrowLeft")
-      next = tabs[(index - 1 + tabs.length) % tabs.length];
+    else if (event.key === "ArrowLeft") next = tabs[(index - 1 + tabs.length) % tabs.length];
     else if (event.key === "Home") next = tabs[0];
     else if (event.key === "End") next = tabs[tabs.length - 1];
     if (next) {
@@ -335,14 +330,23 @@ providerBaseUrl.addEventListener("input", updateActiveProvider);
 providerProtocol.addEventListener("change", updateActiveProvider);
 providerReasoning.addEventListener("change", updateActiveProvider);
 providerModels.addEventListener("input", updateActiveProvider);
-document.querySelectorAll(".preset-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    systemPromptInput.value = SYSTEM_PRESETS[btn.dataset.preset] || "";
+document.querySelectorAll(".preset-btn").forEach((button) => {
+  button.addEventListener("click", () => {
+    systemPromptInput.value = SYSTEM_PRESETS[button.dataset.preset] || "";
     saveSystemPrompt();
     systemPromptInput.focus();
   });
 });
 
+function saveAutoLockPreferences() {
+  // Auto-lock disabled in simplified mode
+  startInactivityLock();
+}
+function loadSecuritySettings() {
+  // No-op: security tab removed
+}
+
+// Remove old export/import functions and replace with simplified versions
 function downloadJson(filename, value) {
   const blob = new Blob([JSON.stringify(value, null, 2)], {
     type: "application/json",
@@ -354,9 +358,8 @@ function downloadJson(filename, value) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
-
 function currentSettingsExport() {
   const numberOrNull = (key) => {
     const raw = store.get(localStorage, key);
@@ -374,30 +377,28 @@ function currentSettingsExport() {
       supportsReasoning: !!provider.supportsReasoning,
       models: (provider.models || []).slice(),
     })),
-    systemPrompt: store.get(localStorage, LS.system) || "",
+    systemPrompt: store.get(localStorage, "llmchat.system.v1") || "",
     generation: {
-      temperature: numberOrNull(LS.temperature),
-      maxOutputTokens: numberOrNull(LS.maxOutputTokens),
-      contextHistoryLimit: numberOrNull(LS.contextHistoryLimit) || 0,
+      temperature: numberOrNull("llmchat.generation.temperature.v1"),
+      maxOutputTokens: numberOrNull("llmchat.generation.max-output-tokens.v1"),
+      contextHistoryLimit: numberOrNull("llmchat.generation.context-history-limit.v1") || 0,
     },
     tools: {
-      run_js: toolPreferenceEnabled(LS.toolRunJs),
-      create_files: toolPreferenceEnabled(LS.toolCreateFiles),
-      wikipedia_search: toolPreferenceEnabled(LS.toolWikipediaSearch),
-      wikipedia_read: toolPreferenceEnabled(LS.toolWikipediaRead),
-      storage_search: toolPreferenceEnabled(LS.toolStorageSearch),
-      storage_read: toolPreferenceEnabled(LS.toolStorageRead),
-      workerTimeout: Number(readPreference(LS.workerTimeout, "5000")) || 5000,
-      maxToolRounds: Number(readPreference(LS.maxToolRounds, "6")) || 6,
+      run_js: toolPreferenceEnabled("llmchat.tool.run-js.v1"),
+      create_files: toolPreferenceEnabled("llmchat.tool.create-files.v1"),
+      wikipedia_search: toolPreferenceEnabled("llmchat.tool.wikipedia-search.v1"),
+      wikipedia_read: toolPreferenceEnabled("llmchat.tool.wikipedia-read.v1"),
+      storage_search: toolPreferenceEnabled("llmchat.tool.storage-search.v1"),
+      storage_read: toolPreferenceEnabled("llmchat.tool.storage-read.v1"),
+      workerTimeout: Number(readPreference("llmchat.tool.worker-timeout.v1", "5000")) || 5000,
+      maxToolRounds: Number(readPreference("llmchat.tool.max-rounds.v1", "6")) || 6,
     },
   };
 }
-
 function exportSettingsFile() {
   downloadJson("open-chat-settings.json", currentSettingsExport());
   setSettingsStatus("Settings exported without API keys.");
 }
-
 function validateSettingsImport(data) {
   const isRecord = (value) =>
     !!value && typeof value === "object" && !Array.isArray(value);
@@ -445,7 +446,6 @@ function validateSettingsImport(data) {
       !inRange(data.tools.maxToolRounds, 1, 50, true))
     throw new Error("Tool settings are invalid");
 }
-
 function refreshProviderUI() {
   saveProviderState();
   refreshModels();
@@ -454,7 +454,6 @@ function refreshProviderUI() {
   renderProviderSettings();
   initKey();
 }
-
 function applySettingsImport(data) {
   validateSettingsImport(data);
   const currentKeys = new Map(providers.map((provider) => [provider.id, provider.apiKey || ""]));
@@ -470,20 +469,20 @@ function applySettingsImport(data) {
     }),
   );
   activeProviderId = (data.activeProviderId || "").trim() || providers[0].id;
-  setPreference(LS.system, data.systemPrompt);
-  setPreference(LS.temperature, data.generation.temperature);
-  setPreference(LS.maxOutputTokens, data.generation.maxOutputTokens);
-  setPreference(LS.contextHistoryLimit, data.generation.contextHistoryLimit);
+  setPreference("llmchat.system.v1", data.systemPrompt);
+  setPreference("llmchat.generation.temperature.v1", data.generation.temperature);
+  setPreference("llmchat.generation.max-output-tokens.v1", data.generation.maxOutputTokens);
+  setPreference("llmchat.generation.context-history-limit.v1", data.generation.contextHistoryLimit);
   [
-    ["run_js", LS.toolRunJs],
-    ["create_files", LS.toolCreateFiles],
-    ["wikipedia_search", LS.toolWikipediaSearch],
-    ["wikipedia_read", LS.toolWikipediaRead],
-    ["storage_search", LS.toolStorageSearch],
-    ["storage_read", LS.toolStorageRead],
+    ["run_js", "llmchat.tool.run-js.v1"],
+    ["create_files", "llmchat.tool.create-files.v1"],
+    ["wikipedia_search", "llmchat.tool.wikipedia-search.v1"],
+    ["wikipedia_read", "llmchat.tool.wikipedia-read.v1"],
+    ["storage_search", "llmchat.tool.storage-search.v1"],
+    ["storage_read", "llmchat.tool.storage-read.v1"],
   ].forEach(([name, key]) => setPreference(key, data.tools[name] ? "1" : "0"));
-  setPreference(LS.workerTimeout, data.tools.workerTimeout);
-  setPreference(LS.maxToolRounds, data.tools.maxToolRounds);
+  setPreference("llmchat.tool.worker-timeout.v1", data.tools.workerTimeout);
+  setPreference("llmchat.tool.max-rounds.v1", data.tools.maxToolRounds);
   refreshProviderUI();
   systemPromptInput.value = data.systemPrompt;
   loadSettingsControls();
@@ -510,13 +509,12 @@ function resetSettingsToDefaults() {
     apiKey: currentKeys.get(provider.id) || "",
   }));
   activeProviderId = providers[0].id;
-  setPreference(LS.system, "");
-  [LS.temperature, LS.maxOutputTokens, LS.contextHistoryLimit].forEach((key) =>
+  ["llmchat.system.v1", "llmchat.generation.temperature.v1", "llmchat.generation.max-output-tokens.v1", "llmchat.generation.context-history-limit.v1"].forEach((key) =>
     setPreference(key, ""),
   );
   TOOL_PREFERENCES.forEach(({ key }) => setPreference(key, "1"));
-  setPreference(LS.workerTimeout, "5000");
-  setPreference(LS.maxToolRounds, "6");
+  setPreference("llmchat.tool.worker-timeout.v1", "5000");
+  setPreference("llmchat.tool.max-rounds.v1", "6");
   refreshProviderUI();
   systemPromptInput.value = "";
   loadSettingsControls();
@@ -524,6 +522,7 @@ function resetSettingsToDefaults() {
   setSettingsStatus("Settings reset to defaults. Matching API keys were kept.");
 }
 
+// Export/import DOM listeners
 $("#exportSettings").addEventListener("click", exportSettingsFile);
 $("#importSettings").addEventListener("click", () => importSettingsInput.click());
 $("#resetSettings").addEventListener("click", resetSettingsToDefaults);
@@ -557,7 +556,7 @@ function exportChats() {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
   setSettingsStatus(
     `Exported ${chats.length} ${plural(chats.length, "chat", "chats")}.`,
   );
@@ -600,7 +599,8 @@ async function importChatsFile(file) {
     fresh.sort((a, b) => b.updatedAt - a.updatedAt);
     chats = [...fresh, ...chats];
     activeId = fresh[0].id;
-    persist();
+    store.set(localStorage, "llmchat.active.v1", activeId);
+    await Promise.all(fresh.map((chat) => saveChat(chat)));
     renderSidebar();
     renderThread();
     updateLayout();
@@ -701,8 +701,11 @@ function clearAllChats() {
   if (generating) stop();
   chats = [];
   activeId = null;
+  try {
+    localStorage.removeItem("llmchat.active.v1");
+  } catch {}
   hideError();
-  persist();
+  clearChatsFromDatabase().catch((error) => showError(`Could not clear chat history: ${error.message || error}`, false));
   renderSidebar();
   renderThread();
   updateLayout();

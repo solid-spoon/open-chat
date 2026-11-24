@@ -140,44 +140,34 @@ function normalizeProviderProfile(raw) {
 
 let providers = [];
 let activeProviderId = "";
+let providerKeysRemembered = false;
+let providerKeysSaveQueue = Promise.resolve();
+let providerSessionKeysSaveQueue = Promise.resolve();
+let providerStateInitialized = false;
 
 function initProviderState() {
+  if (providerStateInitialized) return;
+  providerStateInitialized = true;
+  providerKeysRemembered = readStorageText(localStorage, "open-chat.keys-remembered.v1") === "1";
   const stored = readStorageJson(localStorage, LS.providers);
   if (Array.isArray(stored) && stored.length) {
     providers = stored.map(normalizeProviderProfile).filter(Boolean);
+    providers.forEach((provider) => (provider.apiKey = ""));
   }
 
   if (!providers.length) {
-    const legacyKey = (
-      readStorageText(localStorage, LS.key) ||
-      readStorageText(sessionStorage, LS.key) ||
-      ""
-    ).trim();
     const legacyModel = readStorageText(localStorage, LS.model);
-    const legacyRemembered = !!readStorageText(localStorage, LS.key);
     providers = defaultProviderProfiles();
-    providers.forEach((provider) => {
-      provider.apiKey = legacyKey;
-    });
     activeProviderId = /^openai\//i.test(legacyModel)
       ? "timeweb-responses"
       : legacyModel
         ? "timeweb-chat"
         : "timeweb-responses";
-    saveProviderState(legacyRemembered);
+    writeStorageJson(localStorage, LS.providers, providers);
     try {
-      localStorage.removeItem(LS.key);
-      sessionStorage.removeItem(LS.key);
+      localStorage.setItem(LS.provider, activeProviderId);
     } catch {}
-    if (legacyModel) storeSelectedModel(legacyModel);
   } else {
-    const localKeys = readStorageJson(localStorage, LS.providerKeys) || {};
-    const sessionKeys = readStorageJson(sessionStorage, LS.providerKeys) || {};
-    providers.forEach((provider) => {
-      const storedKey =
-        sessionKeys[provider.id] || localKeys[provider.id] || provider.apiKey;
-      provider.apiKey = typeof storedKey === "string" ? storedKey : "";
-    });
     const storedActive = readStorageText(localStorage, LS.provider);
     activeProviderId = providers.some(
       (provider) => provider.id === storedActive,
@@ -185,9 +175,18 @@ function initProviderState() {
       ? storedActive
       : providers[0].id;
   }
+  refreshModels();
+  if (typeof model !== "undefined") {
+    const savedModel = readStorageText(localStorage, LS.model);
+    model = MODELS.some((item) => item.id === savedModel)
+      ? savedModel
+      : MODELS[0]
+        ? MODELS[0].id
+        : "";
+  }
 }
 
-function saveProviderState(rememberOverride) {
+async function saveProviderState(rememberOverride) {
   const keys = {};
   providers.forEach((provider) => {
     const key = (provider.apiKey || "").trim();
@@ -201,44 +200,49 @@ function saveProviderState(rememberOverride) {
     typeof rememberOverride === "boolean"
       ? rememberOverride
       : !!(rememberInput && rememberInput.checked);
-  writeStorageJson(
-    localStorage,
-    LS.providers,
-    providers.map((provider) => ({
-      ...provider,
-      apiKey: remember ? provider.apiKey : "",
-      models: provider.models.slice(),
-    })),
-  );
+  writeStorageJson(localStorage, LS.providers, providers.map((provider) => ({
+    ...provider,
+    apiKey: "",
+    models: provider.models.slice(),
+  })));
   try {
     localStorage.setItem(LS.provider, activeProviderId);
   } catch {}
-  writeStorageJson(
-    remember ? localStorage : sessionStorage,
-    LS.providerKeys,
-    keys,
-  );
+  providerKeysRemembered = remember && Object.keys(keys).length > 0;
   try {
-    (remember ? sessionStorage : localStorage).removeItem(LS.providerKeys);
+    localStorage.setItem("open-chat.keys-remembered.v1", providerKeysRemembered ? "1" : "0");
   } catch {}
+  if (typeof writeProviderKeys !== "function") return;
+  try {
+    const snapshot = remember ? { ...keys } : {};
+    providerKeysSaveQueue = providerKeysSaveQueue
+      .catch(() => {})
+      .then(() => writeProviderKeys(snapshot));
+    await providerKeysSaveQueue;
+    const sessionSnapshot = remember ? {} : { ...keys };
+    providerSessionKeysSaveQueue = providerSessionKeysSaveQueue
+      .catch(() => {})
+      .then(() => writeSessionProviderKeys(sessionSnapshot));
+    await providerSessionKeysSaveQueue;
+    localStorage.removeItem(LS.providerKeys);
+  } catch (error) {
+    console.error("Could not save provider keys to IndexedDB", error);
+  }
+}
+
+async function loadProviderKeysIntoMemory() {
+  const keys = await readProviderKeys();
+  const sessionKeys = await readSessionProviderKeys();
+  providers.forEach((provider) => {
+    provider.apiKey = typeof keys[provider.id] === "string"
+      ? keys[provider.id]
+      : (sessionKeys[provider.id] || "");
+  });
+  providerKeysRemembered = Object.keys(keys).length > 0;
 }
 
 function isProviderKeyRemembered() {
-  try {
-    if (localStorage.getItem(LS.providerKeys) != null) return true;
-    const stored = readStorageJson(localStorage, LS.providers);
-    return (
-      Array.isArray(stored) &&
-      stored.some(
-        (provider) =>
-          provider &&
-          typeof provider.apiKey === "string" &&
-          !!provider.apiKey.trim(),
-      )
-    );
-  } catch {
-    return false;
-  }
+  return providerKeysRemembered;
 }
 function getActiveProvider() {
   return (
@@ -296,6 +300,3 @@ function storeSelectedModel(value) {
     localStorage.setItem(LS.model, value);
   } catch {}
 }
-
-initProviderState();
-refreshModels();
