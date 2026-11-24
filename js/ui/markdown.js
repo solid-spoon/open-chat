@@ -191,6 +191,10 @@ function enhanceCode(pre, final) {
   if (!code) return;
   const m = code.className.match(/language-([\w+-]+)/);
   const lang = m ? m[1] : "";
+  if (final && lang.toLowerCase() === "mermaid" && window.mermaid) {
+    renderMermaidBlock(pre, code.textContent);
+    return;
+  }
   if (window.hljs) {
     if (lang && hljs.getLanguage(lang)) hljs.highlightElement(code);
     else if (final && !lang) hljs.highlightElement(code); // Auto-detection is expensive; run it only when complete
@@ -224,6 +228,193 @@ function enhanceCode(pre, final) {
   header.append(label, controls);
   pre.replaceWith(block);
   block.append(header, pre);
+}
+
+function renderMermaidBlock(pre, source) {
+  const card = el("section", "mermaid-block");
+  const header = el("div", "mermaid-header");
+  const tabs = el("div", "mermaid-tabs");
+  const diagramTab = el("button", "mermaid-tab active");
+  const codeTab = el("button", "mermaid-tab");
+  diagramTab.type = codeTab.type = "button";
+  diagramTab.textContent = "Diagram";
+  codeTab.textContent = "Code";
+  diagramTab.setAttribute("aria-pressed", "true");
+  codeTab.setAttribute("aria-pressed", "false");
+  tabs.append(diagramTab, codeTab);
+
+  const controls = el("div", "mermaid-controls");
+  const copy = el("button", "code-copy");
+  copy.type = "button";
+  copy.textContent = "Copy";
+  copy.addEventListener("click", () => {
+    copyText(source);
+    copy.textContent = "Copied";
+    setTimeout(() => (copy.textContent = "Copy"), 1600);
+  });
+  const downloadSvg = el("button", "code-copy");
+  downloadSvg.type = "button";
+  downloadSvg.textContent = "Download SVG";
+  const downloadPng = el("button", "code-copy");
+  downloadPng.type = "button";
+  downloadPng.textContent = "Download PNG";
+  const preview = el("button", "code-copy code-preview");
+  preview.type = "button";
+  preview.textContent = "Open preview";
+  controls.append(copy, downloadSvg, downloadPng, preview);
+
+  const diagram = el("div", "mermaid-diagram");
+  diagram.setAttribute("role", "img");
+  diagram.setAttribute("aria-label", "Mermaid diagram");
+  diagram.textContent = "Rendering diagram…";
+  const codeView = el("pre", "mermaid-source");
+  codeView.hidden = true;
+  const code = el("code", "language-mermaid");
+  code.textContent = source;
+  codeView.appendChild(code);
+  const error = el("div", "mermaid-error");
+  error.hidden = true;
+  error.setAttribute("role", "status");
+  const body = el("div", "mermaid-body");
+  body.append(diagram, codeView, error);
+  header.append(tabs, controls);
+  card.append(header, body);
+  pre.replaceWith(card);
+
+  const selectTab = (tab) => {
+    const isDiagram = tab === "diagram" && !error.textContent;
+    diagram.hidden = !isDiagram;
+    codeView.hidden = isDiagram;
+    diagramTab.classList.toggle("active", isDiagram);
+    codeTab.classList.toggle("active", !isDiagram);
+    diagramTab.setAttribute("aria-pressed", String(isDiagram));
+    codeTab.setAttribute("aria-pressed", String(!isDiagram));
+  };
+  diagramTab.addEventListener("click", () => selectTab("diagram"));
+  codeTab.addEventListener("click", () => selectTab("code"));
+
+  let renderedSvg = "";
+  downloadSvg.addEventListener("click", () => {
+    if (renderedSvg) downloadMermaidFile(renderedSvg, "svg");
+  });
+  downloadPng.addEventListener("click", async () => {
+    if (!renderedSvg) return;
+    downloadPng.disabled = true;
+    try {
+      await downloadMermaidFile(renderedSvg, "png");
+    } catch (renderError) {
+      showMermaidError(error, renderError);
+      selectTab("code");
+    } finally {
+      downloadPng.disabled = false;
+    }
+  });
+  preview.addEventListener("click", () => {
+    if (renderedSvg) showArtifact(source, "mermaid", renderedSvg);
+  });
+
+  (async () => {
+    try {
+      configureMermaidTheme();
+      const valid = await window.mermaid.parse(source);
+      if (!valid) throw new Error("Invalid Mermaid syntax.");
+      const result = await window.mermaid.render(`mermaid-${uid()}`, source);
+      if (!card.isConnected) return;
+      renderedSvg = DOMPurify.sanitize(result.svg);
+      if (!/<svg\b/i.test(renderedSvg))
+        throw new Error("Mermaid did not return a valid SVG diagram.");
+      diagram.innerHTML = renderedSvg;
+      diagramTab.disabled = false;
+      downloadSvg.disabled = false;
+      downloadPng.disabled = false;
+      preview.disabled = false;
+    } catch (renderError) {
+      if (!card.isConnected) return;
+      showMermaidError(error, renderError);
+      diagramTab.disabled = true;
+      downloadSvg.disabled = true;
+      downloadPng.disabled = true;
+      preview.disabled = true;
+      selectTab("code");
+    }
+  })();
+}
+
+let configuredMermaidTheme = "";
+function configureMermaidTheme() {
+  if (!window.mermaid) return;
+  const theme =
+    typeof window.openChatMermaidTheme === "function"
+      ? window.openChatMermaidTheme()
+      : "dark";
+  if (theme === configuredMermaidTheme) return;
+  window.mermaid.initialize({
+    startOnLoad: false,
+    theme,
+    securityLevel: "strict",
+    suppressErrorRendering: true,
+  });
+  configuredMermaidTheme = theme;
+}
+
+function showMermaidError(node, error) {
+  const message =
+    error && typeof error.message === "string"
+      ? error.message.replace(/\s+/g, " ").trim()
+      : "Invalid Mermaid syntax.";
+  node.textContent = `Diagram could not be rendered: ${message.slice(0, 220)}`;
+  node.hidden = false;
+}
+
+async function downloadMermaidFile(svg, format) {
+  let blob;
+  let filename;
+  const exportSvg = svg.replace(
+    /(<svg\b[^>]*>)/i,
+    '$1<rect width="100%" height="100%" fill="#1e1e1e"/>',
+  );
+  if (format === "png") {
+    const viewBox = exportSvg.match(/\bviewBox=["']\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/i);
+    const width = Math.max(1, Math.ceil(viewBox ? Number(viewBox[3]) : 1200));
+    const height = Math.max(1, Math.ceil(viewBox ? Number(viewBox[4]) : 800));
+    const source = URL.createObjectURL(
+      new Blob([exportSvg], { type: "image/svg+xml;charset=utf-8" }),
+    );
+    try {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("PNG export is unavailable in this browser.");
+      context.fillStyle = "#1e1e1e";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      blob = await new Promise((resolve, reject) =>
+        canvas.toBlob(
+          (result) =>
+            result ? resolve(result) : reject(new Error("Could not create PNG.")),
+          "image/png",
+        ),
+      );
+    } finally {
+      URL.revokeObjectURL(source);
+    }
+    filename = "diagram.png";
+  } else {
+    blob = new Blob([exportSvg], { type: "image/svg+xml;charset=utf-8" });
+    filename = "diagram.svg";
+  }
+  const url = URL.createObjectURL(blob);
+  const link = el("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function iconBtn(name, title) {

@@ -45,9 +45,9 @@ const DEFAULT_MODEL_META = {
 };
 const SYSTEM_PRESETS = {
   standard:
-    "You are a helpful assistant. Answer clearly, accurately, and directly. If you do not have enough information, ask for clarification.",
+    "You are a helpful assistant. Answer clearly, accurately, and directly. If you do not have enough information, ask for clarification. When asked for a diagram, flowchart, sequence, ER, or state chart, use a fenced Mermaid code block.",
   developer:
-    "You are an experienced software developer. Suggest concrete solutions, provide code examples, and explain key steps. Take the project's existing architecture into account.",
+    "You are an experienced software developer. Suggest concrete solutions, provide code examples, and explain key steps. Take the project's existing architecture into account. Use fenced Mermaid code blocks for requested diagrams and architecture charts.",
   concise:
     "Be concise and direct. Avoid introductions and unnecessary explanations. Use lists and examples only when they are genuinely helpful.",
 };

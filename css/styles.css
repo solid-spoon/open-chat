@@ -913,6 +913,88 @@ textarea,
 .code-copy:hover {
   color: var(--text);
 }
+.code-copy:disabled,
+.mermaid-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mermaid-block {
+  overflow: hidden;
+  margin: 12px 0;
+  border: 1px solid var(--code-border);
+  border-radius: 10px;
+  background: var(--bg-main);
+}
+.mermaid-header,
+.mermaid-tabs,
+.mermaid-controls {
+  display: flex;
+  align-items: center;
+}
+.mermaid-header {
+  min-height: 42px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--code-head);
+  border-bottom: 1px solid var(--code-border);
+}
+.mermaid-tabs,
+.mermaid-controls {
+  gap: 12px;
+}
+.mermaid-tab {
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mermaid-tab.active,
+.mermaid-tab:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.mermaid-body {
+  position: relative;
+  min-height: 140px;
+}
+.mermaid-diagram {
+  display: grid;
+  min-height: 140px;
+  place-items: center;
+  overflow: auto;
+  padding: 16px;
+}
+.mermaid-diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.mermaid-source {
+  max-height: 480px;
+  overflow: auto;
+  padding: 14px;
+  color: var(--text-soft);
+  font: 12.5px/1.6 var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mermaid-source code {
+  font: inherit;
+}
+.mermaid-error {
+  margin: 0 14px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
 .thinking-block,
 .tool-call {
   max-width: 100%;
@@ -1236,6 +1318,10 @@ textarea,
   border-radius: 10px;
   background: #fff;
 }
+.artifact-view {
+  position: relative;
+  overflow: hidden;
+}
 .artifact-view iframe {
   display: block;
   width: 100%;
@@ -1243,6 +1329,44 @@ textarea,
   min-height: 240px;
   border: 0;
   background: #fff;
+}
+.artifact-mermaid-view {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg-main);
+  cursor: grab;
+  touch-action: none;
+}
+.artifact-mermaid-view.is-panning {
+  cursor: grabbing;
+}
+.artifact-mermaid-canvas {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+}
+.artifact-mermaid-canvas svg {
+  width: 100%;
+  height: 100%;
+}
+.artifact-zoom-controls {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 5px;
+  background: var(--bg-sidebar);
+}
+.artifact-zoom-controls .data-btn {
+  min-width: 32px;
+  padding: 6px 8px;
 }
 .artifact-code-view {
   background: var(--code-bg);
@@ -1263,6 +1387,10 @@ textarea,
   align-items: center;
   justify-content: center;
   padding: 0 20px 40px;
+}
+.center-stage > #centerSlot {
+  width: 100%;
+  max-width: 740px;
 }
 .state-empty .center-stage {
   display: flex;
@@ -2074,4 +2202,25 @@ textarea,
     transition: none !important;
     animation: none !important;
   }
+  .mermaid-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mermaid-controls {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+.security-gate {
+  z-index: 1000;
+  background: var(--bg-main);
+}
+.security-gate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.security-gate-card .modal-actions {
+  margin-top: 4px;
 }
