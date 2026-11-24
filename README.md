@@ -11,10 +11,10 @@ A lightweight, browser-based chat client for large language models. Open Chat is
 - **Configurable providers and protocols:** add provider profiles with a base URL, model IDs, and either OpenAI Responses (`/v1/responses`) or Chat Completions (`/v1/chat/completions`). Default profiles are provided for Timeweb AI. Reasoning controls are available for profiles configured to support them.
 - **Generation controls:** set a system prompt, temperature, maximum output tokens, and the number of recent messages sent as context.
 - **Tools:** independently enable `run_js` (runs in a Web Worker with a configurable timeout), `create_files` (text, code, DOCX, PPTX, and ZIP downloads), Wikipedia search/read, and local knowledge-base search/read. Tool rounds can be limited in Settings.
-- **Markdown and artifacts:** sanitized Markdown, syntax highlighting, KaTeX math, collapsible reasoning, and HTML/SVG previews in a sandboxed `iframe`.
+- **Markdown and artifacts:** sanitized Markdown, syntax highlighting, KaTeX math, native Mermaid diagrams with SVG/PNG export and zoomable previews, collapsible reasoning, and HTML/SVG previews in a sandboxed `iframe`.
 - **Attachments:** images are compressed in the browser; text, code, DOCX, and PPTX files are read client-side. Attach files by picker, drag-and-drop, or clipboard paste. Each file can be up to 10 MB.
 - **Chat management:** search chats with `Ctrl+/` or `⌘/`, rename or delete chats, download individual conversations as Markdown, and import/export chat history as JSON.
-- **Settings and privacy:** API keys are kept in `sessionStorage` by default, or can be remembered in `localStorage`. Export/import settings without API keys, and import/export chat history.
+- **Settings and privacy:** API keys stay in `sessionStorage` by default, or can be remembered in IndexedDB. Export/import settings without API keys, and import/export chat history.
 
 ## Getting started
 
@@ -30,7 +30,7 @@ python3 -m http.server 8000
 
 Open <http://localhost:8000>, select **Settings**, choose or add a provider, enter its API key, and configure at least one model ID. The browser must be able to connect directly to that provider (CORS).
 
-The app uses vendored Markdown and syntax-highlighting libraries. KaTeX, JSZip, and the DOCX/PPTX generation libraries are loaded from CDNs when needed, so those features require an internet connection.
+The app uses vendored Markdown and syntax-highlighting libraries. Mermaid, KaTeX, JSZip, and the DOCX/PPTX generation libraries are loaded from CDNs when needed, so those features require an internet connection.
 
 ### Deploy to GitHub Pages
 
