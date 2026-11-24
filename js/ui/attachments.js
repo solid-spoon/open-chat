@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Вложения ================= */
+/* ================= Attachments ================= */
 const TEXT_FILE_EXTENSIONS = {
   txt: "",
   md: "markdown",
@@ -36,6 +36,11 @@ const IMAGE_EXTENSIONS = [
   "svg",
   "avif",
 ];
+const DOCUMENT_EXTENSIONS = ["docx", "pptx"];
+const WORD_NAMESPACE =
+  "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const DRAWING_NAMESPACE =
+  "http://schemas.openxmlformats.org/drawingml/2006/main";
 let pendingAttachments = [];
 
 const hasPendingAttachments = () => pendingAttachments.length > 0;
@@ -66,8 +71,12 @@ function isTextFile(file) {
     Object.prototype.hasOwnProperty.call(
       TEXT_FILE_EXTENSIONS,
       fileExtension(file.name),
-    ) || (file.type && file.type.startsWith("text/"))
+    ) ||
+    (file.type && file.type.startsWith("text/"))
   );
+}
+function isDocumentFile(file) {
+  return DOCUMENT_EXTENSIONS.includes(fileExtension(file.name));
 }
 
 function readFileAsDataURL(file) {
@@ -75,7 +84,7 @@ function readFileAsDataURL(file) {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () =>
-      reject(reader.error || new Error("Не удалось прочитать файл"));
+      reject(reader.error || new Error("Could not read file"));
     reader.readAsDataURL(file);
   });
 }
@@ -83,7 +92,7 @@ function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Не удалось открыть изображение"));
+    img.onerror = () => reject(new Error("Could not open image"));
     img.src = src;
   });
 }
@@ -97,7 +106,7 @@ function resizeToJpeg(img, maxSide, quality) {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas недоступен");
+  if (!ctx) throw new Error("Canvas is unavailable");
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
@@ -121,7 +130,7 @@ async function prepareImage(file) {
   return {
     id: uid(),
     kind: "image",
-    name: file.name || "изображение",
+    name: file.name || "image",
     size: file.size,
     mime: file.type || "image/*",
     dataUrl,
@@ -135,11 +144,95 @@ async function prepareTextFile(file) {
   return {
     id: uid(),
     kind: "file",
-    name: file.name || "файл",
+    name: file.name || "file",
     size: file.size,
     mime: file.type || "",
     text: await file.text(),
     lang: TEXT_FILE_EXTENSIONS[ext] || "",
+  };
+}
+function parseXmlDocument(source, label) {
+  const doc = new DOMParser().parseFromString(source, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length)
+    throw new Error(`Could not parse ${label}.`);
+  return doc;
+}
+async function extractDocxText(zip) {
+  const entry = zip.file("word/document.xml");
+  if (!entry)
+    throw new Error("The Word document does not contain word/document.xml.");
+  const doc = parseXmlDocument(
+    await entry.async("string"),
+    "the Word document",
+  );
+  const paragraphs = [];
+  Array.from(doc.getElementsByTagNameNS(WORD_NAMESPACE, "p")).forEach(
+    (paragraph) => {
+      let text = "";
+      Array.from(paragraph.getElementsByTagNameNS(WORD_NAMESPACE, "*")).forEach(
+        (node) => {
+          if (node.localName === "t") text += node.textContent || "";
+          else if (node.localName === "tab") text += "\t";
+          else if (node.localName === "br" || node.localName === "cr")
+            text += "\n";
+        },
+      );
+      if (text.trim()) paragraphs.push(text.replace(/[ \t]+$/g, ""));
+    },
+  );
+  return paragraphs.join("\n");
+}
+async function extractPptxText(zip) {
+  const slides = Object.keys(zip.files)
+    .map((name) => {
+      const match = name.match(/^ppt\/slides\/slide(\d+)\.xml$/i);
+      return match ? { name, index: Number(match[1]) } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.index - b.index);
+  if (!slides.length)
+    throw new Error("The PowerPoint presentation does not contain slides.");
+  const sections = [];
+  for (const slide of slides) {
+    const doc = parseXmlDocument(
+      await zip.file(slide.name).async("string"),
+      `slide ${slide.index}`,
+    );
+    const paragraphs = [];
+    Array.from(doc.getElementsByTagNameNS(DRAWING_NAMESPACE, "p")).forEach(
+      (paragraph) => {
+        let text = "";
+        Array.from(
+          paragraph.getElementsByTagNameNS(DRAWING_NAMESPACE, "t"),
+        ).forEach((node) => {
+          text += node.textContent || "";
+        });
+        if (text.trim()) paragraphs.push(text.trim());
+      },
+    );
+    sections.push(
+      `Slide ${slide.index}:${paragraphs.length ? "\n" + paragraphs.join("\n") : ""}`,
+    );
+  }
+  return sections.join("\n\n");
+}
+async function prepareDocumentFile(file) {
+  if (!window.JSZip)
+    throw new Error("JSZip is unavailable. Check your internet connection.");
+  const ext = fileExtension(file.name);
+  const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
+  const text =
+    ext === "docx" ? await extractDocxText(zip) : await extractPptxText(zip);
+  if (!text.trim())
+    throw new Error("No text could be extracted from the document.");
+  return {
+    id: uid(),
+    kind: "file",
+    name: file.name || ext,
+    size: file.size,
+    mime: file.type || "",
+    text,
+    lang: "",
   };
 }
 
@@ -150,7 +243,7 @@ async function addFiles(files) {
   for (const file of list) {
     if (file.size > MAX_ATTACHMENT_SIZE) {
       errors.push(
-        `«${file.name}» больше 10 МБ (${formatBytes(file.size)}). Максимум — 10 МБ.`,
+        `“${file.name}” exceeds 10 MB (${formatBytes(file.size)}). Maximum size is 10 MB.`,
       );
       continue;
     }
@@ -160,7 +253,17 @@ async function addFiles(files) {
         renderAttachments();
         updateSendState();
       } catch {
-        errors.push(`Не удалось обработать изображение «${file.name}».`);
+        errors.push(`Could not process image “${file.name}”.`);
+      }
+    } else if (isDocumentFile(file)) {
+      try {
+        pendingAttachments.push(await prepareDocumentFile(file));
+        renderAttachments();
+        updateSendState();
+      } catch (error) {
+        errors.push(
+          `Could not read document “${file.name}”: ${error.message || error}.`,
+        );
       }
     } else if (isTextFile(file)) {
       try {
@@ -168,11 +271,11 @@ async function addFiles(files) {
         renderAttachments();
         updateSendState();
       } catch {
-        errors.push(`Не удалось прочитать файл «${file.name}».`);
+        errors.push(`Could not read file “${file.name}”.`);
       }
     } else {
       errors.push(
-        `Файл «${file.name}» не поддерживается. Прикрепите изображение или текстовый/кодовый файл.`,
+        `File “${file.name}” is not supported. Attach an image, text file, Word document, PowerPoint presentation, or code file.`,
       );
     }
   }
@@ -197,15 +300,15 @@ function renderAttachments() {
     }
     const info = el("div", "attachment-info");
     const name = el("span", "attachment-name");
-    name.textContent = a.name || "файл";
+    name.textContent = a.name || "file";
     const size = el("span", "attachment-size");
     size.textContent = formatBytes(a.size);
     info.append(name, size);
     const remove = el("button", "attachment-remove");
     remove.type = "button";
     remove.dataset.id = a.id;
-    remove.title = "Удалить вложение";
-    remove.setAttribute("aria-label", `Удалить вложение ${a.name || ""}`);
+    remove.title = "Remove attachment";
+    remove.setAttribute("aria-label", `Remove attachment ${a.name || ""}`);
     remove.innerHTML = icon("x", 13);
     chip.append(info, remove);
     attachmentsBar.appendChild(chip);
@@ -237,17 +340,15 @@ input.addEventListener("paste", (e) => {
       if (file) files.push(file);
     }
   }
-  if (!files.length && cd.files && cd.files.length)
-    files.push(...cd.files);
+  if (!files.length && cd.files && cd.files.length) files.push(...cd.files);
   if (!files.length) return;
   e.preventDefault();
   addFiles(files);
 });
 
-/* ---------- Перетаскивание файлов ---------- */
+/* ---------- Drag and drop ---------- */
 const hasFileDrag = (e) =>
-  !!e.dataTransfer &&
-  Array.from(e.dataTransfer.types || []).includes("Files");
+  !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
 let dragDepth = 0;
 function resetDrop() {
   dragDepth = 0;
@@ -285,14 +386,14 @@ window.addEventListener("drop", (e) => {
 });
 window.addEventListener("dragend", resetDrop);
 
-/* ---------- Преобразование в формат OpenAI ---------- */
+/* ---------- Convert attachments to OpenAI format ---------- */
 function fileBlock(a) {
   if (!a.text) return "";
   const runs = a.text.match(/`+/g);
   const longest = runs ? Math.max(...runs.map((s) => s.length)) : 0;
   const fence = "`".repeat(Math.max(3, longest + 1));
   const body = a.text.endsWith("\n") ? a.text.slice(0, -1) : a.text;
-  return `**Файл: ${a.name}**\n\n${fence}${a.lang || ""}\n${body}\n${fence}`;
+  return `**File: ${a.name}**\n\n${fence}${a.lang || ""}\n${body}\n${fence}`;
 }
 function buildApiMessage(m) {
   const attachments = m.attachments || [];

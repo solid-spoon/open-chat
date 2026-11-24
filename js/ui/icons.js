@@ -1,7 +1,10 @@
 "use strict";
 
-/* ================= SVG-иконки (стиль Lucide) ================= */
+/* ================= SVG icons (Lucide style) ================= */
 const ICONS = {
+  brand:
+    '<path d="M12 1.5l2.6 7.9a2 2 0 0 0 1.4 1.4L23.5 12l-7.5 2.2a2 2 0 0 0-1.4 1.4L12 22.5l-2.6-6.9a2 2 0 0 0-1.4-1.4L.5 12l7.5-1.2a2 2 0 0 0 1.4-1.4Z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
   "panel-left":
     '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
   "square-pen":
@@ -35,14 +38,15 @@ const ICONS = {
   upload:
     '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
-  archive: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M10 12h4m-4 3h4"/>',
+  archive:
+    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M10 12h4m-4 3h4"/>',
   image:
     '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
 };
 const icon = (name, size = 18) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 
-/* ================= SVG-аватары моделей ================= */
+/* ================= SVG model avatars ================= */
 const MODEL_LOGOS = {
   openai: {
     viewBox: "0 0 23 22",

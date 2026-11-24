@@ -15,8 +15,8 @@
   --link: #8ab4f8;
   --danger: #ef4444;
   --font-ui:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
   --font-mono:
     ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
@@ -79,7 +79,7 @@ textarea,
   height: 100%;
 }
 
-/* ---------- Сайдбар ---------- */
+/* ---------- Sidebar ---------- */
 .sidebar {
   width: 260px;
   flex-shrink: 0;
@@ -104,6 +104,19 @@ textarea,
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+}
+.brand-mark svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
 }
 
 .icon-btn {
@@ -130,12 +143,13 @@ textarea,
   display: block;
 }
 
-.new-chat {
+.new-chat,
+.sidebar-action {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px;
+  padding: 9px 8px;
   border: 0;
   border-radius: 10px;
   background: none;
@@ -145,17 +159,26 @@ textarea,
   cursor: pointer;
   transition: background 0.12s;
 }
-.new-chat:hover {
+.new-chat:hover,
+.sidebar-action:hover {
   background: var(--bg-hover);
 }
-.new-chat svg {
+.new-chat svg,
+.sidebar-action svg {
   color: var(--text);
 }
-.new-chat kbd {
+.new-chat kbd,
+.sidebar-action kbd {
   margin-left: auto;
   font-family: inherit;
   font-size: 11px;
   color: var(--muted);
+}
+.sidebar-divider {
+  height: 1px;
+  flex-shrink: 0;
+  margin-top: 8px;
+  background: var(--border-soft);
 }
 
 .chat-list {
@@ -195,12 +218,23 @@ textarea,
 .chat-title {
   flex: 1;
   min-width: 0;
-  padding-right: 56px;
+  padding-right: 84px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .chat-edit {
+  position: absolute;
+  right: 57px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  opacity: 0;
+  transition:
+    opacity 0.12s,
+    background 0.12s;
+}
+.chat-download {
   position: absolute;
   right: 31px;
   width: 26px;
@@ -210,6 +244,14 @@ textarea,
   transition:
     opacity 0.12s,
     background 0.12s;
+}
+.chat-item:hover .chat-download,
+.chat-download:focus-visible {
+  opacity: 1;
+}
+.chat-download:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
 }
 .chat-item:hover .chat-edit,
 .chat-edit:focus-visible {
@@ -253,7 +295,8 @@ textarea,
 }
 @media (hover: none) {
   .chat-del,
-  .chat-edit {
+  .chat-edit,
+  .chat-download {
     opacity: 0.7;
   }
 }
@@ -268,7 +311,7 @@ textarea,
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px;
+  padding: 10px 8px;
   border: 0;
   border-radius: 10px;
   background: none;
@@ -362,7 +405,7 @@ textarea,
   color: var(--muted);
 }
 
-/* ---------- Основная область ---------- */
+/* ---------- Main area ---------- */
 .main {
   flex: 1;
   min-width: 0;
@@ -407,7 +450,9 @@ textarea,
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.14s ease, color 0.14s ease;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
 }
 .reasoning-btn:hover,
 .reasoning-btn[aria-expanded="true"] {
@@ -450,7 +495,9 @@ textarea,
   text-align: left;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 .reasoning-item:hover,
 .reasoning-item.selected {
@@ -497,12 +544,28 @@ textarea,
   top: calc(100% + 6px);
   left: 0;
   min-width: 290px;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
   padding: 6px;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   z-index: 30;
+}
+.model-menu-head {
+  padding: 6px 12px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.model-menu-empty {
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 .model-item {
   display: flex;
@@ -541,7 +604,7 @@ textarea,
   visibility: visible;
 }
 
-/* ---------- Лента ---------- */
+/* ---------- Message feed ---------- */
 .feed {
   flex: 1;
   overflow-y: auto;
@@ -913,7 +976,11 @@ textarea,
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .tool-call {
   background: var(--code-bg);
 }
@@ -934,6 +1001,50 @@ textarea,
 }
 .tool-output {
   color: #b8d8b8;
+}
+.wikipedia-tool-content {
+  max-height: 420px;
+  overflow: auto;
+  padding: 0 12px 12px;
+}
+.wikipedia-tool-query {
+  padding: 0 0 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+.wikipedia-article {
+  padding: 9px 0;
+  border-top: 1px solid var(--code-border);
+}
+.wikipedia-article-title {
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.wikipedia-article-title:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.wikipedia-article-snippet,
+.wikipedia-article-extract,
+.wikipedia-tool-note,
+.wikipedia-tool-error {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.wikipedia-article-snippet,
+.wikipedia-tool-note {
+  color: var(--muted);
+}
+.wikipedia-article-extract {
+  color: var(--text-soft);
+}
+.wikipedia-tool-error {
+  color: #fca5a5;
 }
 .created-file-card {
   display: flex;
@@ -1038,7 +1149,7 @@ textarea,
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Панель Canvas / Artifacts ---------- */
+/* ---------- Canvas / artifacts panel ---------- */
 .artifact-panel {
   position: absolute;
   z-index: 15;
@@ -1053,7 +1164,16 @@ textarea,
   transform: translateX(0);
   animation: artifact-in 0.22s ease-out;
 }
-@keyframes artifact-in { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes artifact-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 .artifact-open .feed,
 .artifact-open .topbar,
 .artifact-open .bottom-stage,
@@ -1061,8 +1181,12 @@ textarea,
   width: 54%;
   right: auto;
 }
-.artifact-open .feed { padding-right: 20px; }
-.artifact-open .bottom-stage { right: auto; }
+.artifact-open .feed {
+  padding-right: 20px;
+}
+.artifact-open .bottom-stage {
+  right: auto;
+}
 .artifact-head {
   display: flex;
   align-items: center;
@@ -1127,9 +1251,11 @@ textarea,
   font: 12.5px/1.6 var(--font-mono);
   white-space: pre-wrap;
 }
-.artifact-code-view code { font: inherit; }
+.artifact-code-view code {
+  font: inherit;
+}
 
-/* ---------- Пустой экран ---------- */
+/* ---------- Empty state ---------- */
 .center-stage {
   display: none;
   flex: 1;
@@ -1153,7 +1279,7 @@ textarea,
   text-align: center;
 }
 
-/* ---------- Композер ---------- */
+/* ---------- Composer ---------- */
 .bottom-stage {
   position: absolute;
   bottom: 0;
@@ -1379,7 +1505,7 @@ textarea,
   color: #fecaca;
 }
 
-/* ---------- Модалка ---------- */
+/* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1438,16 +1564,54 @@ textarea,
   background: #dc2626;
 }
 
-/* ---------- Настройки ---------- */
+/* ---------- Settings ---------- */
 .settings-modal {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 560px;
+  max-width: 760px;
+  min-height: min(540px, 80vh);
   max-height: min(86vh, 760px);
   padding: 0;
   overflow: hidden;
   outline: none;
+}
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+}
+.settings-tab {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.settings-tab:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.settings-tab[aria-selected="true"] {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.settings-tab:focus-visible {
+  outline: 2px solid #6ea8fe;
+  outline-offset: 2px;
 }
 .settings-head {
   display: flex;
@@ -1461,8 +1625,16 @@ textarea,
   margin: 0;
 }
 .settings-body {
+  flex: 1 1 auto;
+  min-height: 260px;
   overflow-y: auto;
   padding: 2px 22px 20px;
+}
+.settings-tabpanel[hidden] {
+  display: none;
+}
+.settings-tabpanel {
+  min-height: 100%;
 }
 .settings-section {
   padding: 18px 0;
@@ -1479,6 +1651,9 @@ textarea,
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.tool-setting-label {
+  margin-top: 18px;
 }
 .field-label {
   display: block;
@@ -1550,6 +1725,45 @@ textarea,
   font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
+}
+.provider-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.provider-row .settings-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.settings-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.settings-input:focus {
+  border-color: #565656;
+}
+.settings-input::placeholder {
+  color: var(--muted);
+}
+.settings-input option {
+  background: var(--bg-surface);
+  color: var(--text);
+}
+.settings-section .settings-input + .field-label {
+  margin-top: 10px;
 }
 .settings-textarea {
   display: block;
@@ -1650,7 +1864,111 @@ textarea,
   color: #fca5a5;
 }
 
-/* ---------- Мобильная версия ---------- */
+/* ---------- Chat search ---------- */
+.search-modal {
+  max-width: 600px;
+  max-height: min(72vh, 620px);
+  padding: 0;
+}
+.search-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+.search-field-wrap [data-icon] {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.search-field-wrap input {
+  flex: 1;
+  min-width: 0;
+  padding: 18px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+}
+.search-field-wrap input::placeholder {
+  color: var(--muted);
+}
+.search-field-wrap input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-field-wrap kbd {
+  flex-shrink: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--muted);
+}
+.search-results {
+  overflow-y: auto;
+  padding: 8px;
+}
+.search-section-label {
+  padding: 8px 10px 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-soft);
+  text-align: left;
+  cursor: pointer;
+}
+.search-result[aria-selected="true"],
+.search-result:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+.search-result-title {
+  overflow: hidden;
+  font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result-snippet {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result-snippet mark {
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+}
+.search-empty {
+  padding: 22px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ---------- Mobile layout ---------- */
 @media (max-width: 767px) {
   .sidebar {
     position: fixed;
@@ -1676,6 +1994,9 @@ textarea,
   #headerNewChat {
     display: inline-flex;
   }
+  .search-modal {
+    max-height: min(76vh, 620px);
+  }
   .feed {
     padding: 16px 14px 160px;
   }
@@ -1692,9 +2013,15 @@ textarea,
     width: 100%;
     min-width: 0;
   }
-  .artifact-head { padding-left: 14px; }
-  .artifact-actions { gap: 3px; }
-  .artifact-actions .data-btn { padding: 7px; }
+  .artifact-head {
+    padding-left: 14px;
+  }
+  .artifact-actions {
+    gap: 3px;
+  }
+  .artifact-actions .data-btn {
+    padding: 7px;
+  }
   .thread {
     gap: 24px;
   }
@@ -1714,6 +2041,7 @@ textarea,
     grid-template-columns: minmax(0, 1fr);
   }
   .settings-modal {
+    min-height: min(520px, 78dvh);
     max-height: 90dvh;
   }
   .settings-head {
@@ -1722,12 +2050,24 @@ textarea,
   .settings-body {
     padding: 2px 16px 18px;
   }
+  .settings-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px 12px;
+    scrollbar-width: thin;
+  }
+  .settings-tab {
+    flex: 0 0 auto;
+    padding: 9px 12px;
+  }
   .composer textarea,
   .key-field input,
+  .settings-input,
   .settings-textarea,
   .chat-rename {
     font-size: 16px;
-  } /* против автозума iOS */
+  } /* Prevent iOS auto-zoom */
 }
 @media (prefers-reduced-motion: reduce) {
   * {

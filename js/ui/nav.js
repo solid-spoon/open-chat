@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Сайдбар: сворачивание ================= */
+/* ================= Sidebar: collapse and expand ================= */
 function setNav(open, save = true) {
   sidebarOpen = open;
   app.classList.toggle("nav-collapsed", !open);
@@ -17,13 +17,17 @@ matchMedia("(max-width: 767px)").addEventListener("change", (e) =>
 $("#newChatBtn").addEventListener("click", newChat);
 $("#headerNewChat").addEventListener("click", newChat);
 
-/* ================= Глобальные горячие клавиши ================= */
+/* ================= Global keyboard shortcuts ================= */
 document.addEventListener("keydown", (e) => {
   if (e.code === "KeyK" && (e.metaKey || e.ctrlKey)) {
     e.preventDefault();
     newChat();
+  } else if (e.code === "Slash" && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    if (searchModal.hidden) openSearch();
   } else if (e.key === "Escape") {
-    if (!modal.hidden) closeModal();
+    if (!searchModal.hidden) closeSearch();
+    else if (!modal.hidden) closeModal();
     else if (!settingsModal.hidden) closeSettings();
     else if (!modelMenu.hidden) closeModelMenu();
     else if (!reasoningMenu.hidden) closeReasoningMenu();

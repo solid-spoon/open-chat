@@ -1,11 +1,11 @@
 "use strict";
 
-/* ================= Сайдбар: список чатов ================= */
+/* ================= Sidebar: chat list ================= */
 function renderSidebar() {
   chatList.innerHTML = "";
   if (!chats.length) {
     const hint = el("div", "list-hint");
-    hint.textContent = "Здесь появятся ваши чаты";
+    hint.textContent = "Your chats will appear here";
     chatList.appendChild(hint);
     return;
   }
@@ -14,15 +14,14 @@ function renderSidebar() {
   const today = +dayStart,
     yesterday = today - 864e5;
   const groups = [
-    { label: "Сегодня", items: [] },
-    { label: "Вчера", items: [] },
-    { label: "Ранее", items: [] },
+    { label: "Today", items: [] },
+    { label: "Yesterday", items: [] },
+    { label: "Older", items: [] },
   ];
   [...chats]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .forEach((c) => {
-      const g =
-        c.updatedAt >= today ? 0 : c.updatedAt >= yesterday ? 1 : 2;
+      const g = c.updatedAt >= today ? 0 : c.updatedAt >= yesterday ? 1 : 2;
       groups[g].items.push(c);
     });
   groups.forEach((g) => {
@@ -39,18 +38,23 @@ function renderSidebar() {
       item.tabIndex = 0;
       item.setAttribute("role", "button");
       const title = el("span", "chat-title");
-      title.textContent = c.title || "Новый чат";
+      title.textContent = c.title || "New chat";
+      const download = el("button", "icon-btn chat-download");
+      download.type = "button";
+      download.title = "Download (.md)";
+      download.setAttribute("aria-label", "Download chat as Markdown");
+      download.innerHTML = icon("download", 14);
       const edit = el("button", "icon-btn chat-edit");
       edit.type = "button";
-      edit.title = "Переименовать чат";
-      edit.setAttribute("aria-label", "Переименовать чат");
+      edit.title = "Rename chat";
+      edit.setAttribute("aria-label", "Rename chat");
       edit.innerHTML = icon("pencil", 14);
       const del = el("button", "icon-btn chat-del");
       del.type = "button";
-      del.title = "Удалить чат";
-      del.setAttribute("aria-label", "Удалить чат");
+      del.title = "Delete chat";
+      del.setAttribute("aria-label", "Delete chat");
       del.innerHTML = icon("trash", 15);
-      item.append(title, edit, del);
+      item.append(title, download, edit, del);
       chatList.appendChild(item);
     });
   });
@@ -60,6 +64,11 @@ chatList.addEventListener("click", (e) => {
   const item = e.target.closest(".chat-item");
   if (!item) return;
   if (e.target.closest(".chat-rename")) return;
+  if (e.target.closest(".chat-download")) {
+    const chat = chats.find((c) => c.id === item.dataset.id);
+    downloadChatMarkdown(chat);
+    return;
+  }
   if (e.target.closest(".chat-edit")) {
     startRename(item.dataset.id);
     return;
@@ -96,9 +105,9 @@ function startRename(id) {
   if (!title) return;
   const field = el("input", "chat-rename");
   field.type = "text";
-  field.value = chat.title || "Новый чат";
+  field.value = chat.title || "New chat";
   field.maxLength = 120;
-  field.setAttribute("aria-label", "Название чата");
+  field.setAttribute("aria-label", "Chat title");
   title.replaceWith(field);
   field.focus();
   field.select();
@@ -128,7 +137,7 @@ function startRename(id) {
   field.addEventListener("blur", () => finish(true));
 }
 
-/* ================= Навигация по чатам ================= */
+/* ================= Chat navigation ================= */
 function switchChat(id) {
   if (id === activeId) {
     if (isMobile()) setNav(false, false);
@@ -155,7 +164,7 @@ function newChat() {
     if (isMobile()) setNav(false, false);
     return;
   }
-  activeId = null; // черновик: попадёт в список только после первого сообщения
+  activeId = null; // Draft; it appears in the list after the first message
   persist();
   renderSidebar();
   renderThread();
@@ -169,7 +178,7 @@ let confirmAction = null;
 function openConfirmDialog({
   title,
   text,
-  confirmLabel = "Удалить",
+  confirmLabel = "Delete",
   onConfirm,
 }) {
   modalTitle.textContent = title;
@@ -183,8 +192,8 @@ function openConfirm(id) {
   const chat = chats.find((c) => c.id === id);
   if (!chat) return;
   openConfirmDialog({
-    title: "Удалить чат?",
-    text: `Чат «${chat.title || "Новый чат"}» будет удалён без возможности восстановления.`,
+    title: "Delete chat?",
+    text: `The chat “${chat.title || "New chat"}” will be permanently deleted.`,
     onConfirm: () => deleteChat(id),
   });
 }

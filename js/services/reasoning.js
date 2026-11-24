@@ -1,11 +1,11 @@
 "use strict";
 
-/* ================= Селектор уровня размышлений ================= */
+/* ================= Reasoning effort selector ================= */
 const REASONING_EFFORTS = [
-  { id: "none", label: "Выкл" },
-  { id: "low", label: "Низкий" },
-  { id: "medium", label: "Средний" },
-  { id: "high", label: "Высокий" },
+  { id: "none", label: "Off" },
+  { id: "low", label: "Low" },
+  { id: "medium", label: "Medium" },
+  { id: "high", label: "High" },
 ];
 
 function buildReasoningMenu() {
@@ -29,14 +29,16 @@ function buildReasoningMenu() {
 }
 
 function updateReasoningAvailability() {
-  const available = model.startsWith("openai/");
+  const available = activeProviderSupportsReasoning();
   reasoningPicker.hidden = !available;
   reasoningBtn.disabled = !available;
   if (!available) closeReasoningMenu();
 }
 
 function updateReasoningUI() {
-  const current = REASONING_EFFORTS.find((item) => item.id === reasoningEffort) || REASONING_EFFORTS[2];
+  const current =
+    REASONING_EFFORTS.find((item) => item.id === reasoningEffort) ||
+    REASONING_EFFORTS[2];
   reasoningLabel.textContent = current.label;
   reasoningMenu.querySelectorAll(".reasoning-item").forEach((item) => {
     const selected = item.dataset.effort === current.id;
@@ -57,7 +59,8 @@ reasoningBtn.addEventListener("click", () => {
 });
 
 document.addEventListener("click", (event) => {
-  if (!reasoningMenu.hidden && !reasoningPicker.contains(event.target)) closeReasoningMenu();
+  if (!reasoningMenu.hidden && !reasoningPicker.contains(event.target))
+    closeReasoningMenu();
 });
 
 buildReasoningMenu();

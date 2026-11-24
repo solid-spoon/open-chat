@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Композер ================= */
+/* ================= Message composer ================= */
 function autosize() {
   input.style.height = "auto";
   input.style.height = Math.min(input.scrollHeight, 200) + "px";
@@ -13,7 +13,7 @@ function updateSendState() {
 }
 function setSendState(gen) {
   sendBtn.innerHTML = icon(gen ? "stop" : "arrow-up", 18);
-  const label = gen ? "Остановить генерацию" : "Отправить";
+  const label = gen ? "Stop generating" : "Send message";
   sendBtn.title = label;
   sendBtn.setAttribute("aria-label", label);
   updateSendState();
@@ -36,7 +36,7 @@ sendBtn.addEventListener("click", () => {
   generating ? stop() : send();
 });
 
-/* ================= Редактирование сообщения ================= */
+/* ================= Message editing ================= */
 function startEditMessage(msg) {
   if (generating) stop();
   const chat = getActive();

@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Ошибки ================= */
+/* ================= Errors ================= */
 function showError(text, canRetry) {
   errorText.textContent = text;
   retryBtn.hidden = !canRetry;
@@ -24,13 +24,13 @@ function apiError(status, raw) {
   } catch {}
   if (!msg) msg = (raw || "").slice(0, 200);
   if (status === 401 || status === 403)
-    return `Ошибка ${status}: доступ запрещён. Проверьте API-ключ в настройках.`;
+    return `Error ${status}: access denied. Check your API key in Settings.`;
   if (status === 429)
-    return "Ошибка 429: лимит запросов или баланс исчерпан. Попробуйте позже.";
-  return `Ошибка ${status}${msg ? ": " + msg : ""}`;
+    return "Error 429: rate limit reached or account balance exhausted. Try again later.";
+  return `Error ${status}${msg ? ": " + msg : ""}`;
 }
 function humanError(err) {
   if (err instanceof TypeError)
-    return "Не удалось соединиться с api.timeweb.ai. Проверьте сеть. Если запрос блокирует CORS, понадобится прокси-сервер.";
-  return (err && err.message) || "Неизвестная ошибка";
+    return "Could not connect to api.timeweb.ai. Check your internet connection. If the request is blocked by CORS, you may need a proxy server.";
+  return (err && err.message) || "Unknown error";
 }

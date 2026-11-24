@@ -1,14 +1,13 @@
 "use strict";
 
-/* ================= Раскладка: пустой экран / лента ================= */
+/* ================= Layout: empty state and message feed ================= */
 function updateLayout() {
   const chat = getActive();
   const empty = !chat || chat.messages.length === 0;
   main.classList.toggle("state-empty", empty);
   const slot = empty ? centerSlot : bottomSlot;
   if (composerBox.parentElement !== slot) slot.appendChild(composerBox);
-  if (!empty)
-    feed.style.paddingBottom = composerBox.offsetHeight + 64 + "px";
+  if (!empty) feed.style.paddingBottom = composerBox.offsetHeight + 64 + "px";
   updateScrollBtn();
 }
 new ResizeObserver(() => {
@@ -17,9 +16,8 @@ new ResizeObserver(() => {
   }
 }).observe(composerBox);
 
-/* ================= Умный автоскролл ================= */
-const bottomDist = () =>
-  feed.scrollHeight - feed.scrollTop - feed.clientHeight;
+/* ================= Smart auto-scroll ================= */
+const bottomDist = () => feed.scrollHeight - feed.scrollTop - feed.clientHeight;
 function scrollToBottom(smooth) {
   feed.scrollTo({
     top: feed.scrollHeight,

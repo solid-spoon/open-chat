@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Состояние ================= */
+/* ================= State ================= */
 let chats = loadChats();
 let activeId = (() => {
   const v = store.get(localStorage, LS.active);
@@ -8,17 +8,17 @@ let activeId = (() => {
 })();
 let model = (() => {
   const v = store.get(localStorage, LS.model);
-  return MODELS.some((m) => m.id === v) ? v : MODELS[0].id;
+  return MODELS.some((m) => m.id === v) ? v : MODELS[0] ? MODELS[0].id : "";
 })();
 let reasoningEffort = (() => {
   const value = store.get(localStorage, LS.reasoningEffort);
   return ["none", "low", "medium", "high"].includes(value) ? value : "medium";
 })();
 let generating = null; // { ctl, chat, chatId, msg, t0, usage, model }
-let streamBody = null; // .md-узел стримящегося сообщения
+let streamBody = null; // .md element for the streaming message
 let streamThinking = null;
 let renderTimer = null;
-let stick = true; // автоскролл прилеплен к низу
+let stick = true; // Keep auto-scroll pinned to the bottom
 let sidebarOpen = true;
 let lastSave = 0,
   storageWarned = false;
@@ -37,7 +37,7 @@ function loadChats() {
 function normalizeAttachment(a) {
   if (!a || typeof a !== "object") return null;
   const kind = a.kind === "image" ? "image" : "file";
-  const name = typeof a.name === "string" && a.name ? a.name : "файл";
+  const name = typeof a.name === "string" && a.name ? a.name : "file";
   const size = +a.size || 0;
   const mime = typeof a.mime === "string" ? a.mime : "";
   if (kind === "image") {
@@ -94,33 +94,61 @@ function normalizeChats(arr) {
           const attachments = Array.isArray(m.attachments)
             ? m.attachments.map(normalizeAttachment).filter(Boolean)
             : [];
-          const createdFiles = normalizeCreatedFiles(m.createdFiles, m.toolCalls);
+          const createdFiles = normalizeCreatedFiles(
+            m.createdFiles,
+            m.toolCalls,
+          );
           return {
             id: m.id || uid(),
             role: m.role,
             content: m.content,
             meta: m.meta && typeof m.meta === "object" ? m.meta : null,
-            ...(typeof m.reasoning === "string" ? { reasoning: m.reasoning } : {}),
-            ...(Number.isFinite(+m.reasoningMs) ? { reasoningMs: +m.reasoningMs } : {}),
+            ...(typeof m.reasoning === "string"
+              ? { reasoning: m.reasoning }
+              : {}),
+            ...(Number.isFinite(+m.reasoningMs)
+              ? { reasoningMs: +m.reasoningMs }
+              : {}),
             ...(["none", "low", "medium", "high"].includes(m.reasoningEffort)
               ? { reasoningEffort: m.reasoningEffort }
               : {}),
-            ...(createdFiles.length
-              ? { createdFiles }
+            ...(createdFiles.length ? { createdFiles } : {}),
+            ...(Array.isArray(m.toolCalls)
+              ? {
+                  toolCalls: m.toolCalls
+                    .filter(
+                      (call) =>
+                        call &&
+                        typeof call.id === "string" &&
+                        call.function &&
+                        typeof call.function.name === "string" &&
+                        typeof call.function.arguments === "string",
+                    )
+                    .map((call) => ({
+                      id: call.id,
+                      type: "function",
+                      function: {
+                        name: call.function.name,
+                        arguments: call.function.arguments,
+                      },
+                    })),
+                }
               : {}),
-            ...(Array.isArray(m.toolCalls) ? {
-              toolCalls: m.toolCalls.filter((call) => call && typeof call.id === "string" && call.function && typeof call.function.name === "string" && typeof call.function.arguments === "string").map((call) => ({
-                id: call.id,
-                type: "function",
-                function: { name: call.function.name, arguments: call.function.arguments },
-              })),
-            } : {}),
-            ...(Array.isArray(m.toolResults) ? {
-              toolResults: m.toolResults.filter((result) => result && typeof result.tool_call_id === "string" && typeof result.content === "string").map((result) => ({
-                tool_call_id: result.tool_call_id,
-                content: result.content,
-              })),
-            } : {}),
+            ...(Array.isArray(m.toolResults)
+              ? {
+                  toolResults: m.toolResults
+                    .filter(
+                      (result) =>
+                        result &&
+                        typeof result.tool_call_id === "string" &&
+                        typeof result.content === "string",
+                    )
+                    .map((result) => ({
+                      tool_call_id: result.tool_call_id,
+                      content: result.content,
+                    })),
+                }
+              : {}),
             ...(attachments.length ? { attachments } : {}),
           };
         }),
@@ -143,10 +171,13 @@ function slimChatsForStorage() {
   }));
 }
 function slimCreatedFiles(message) {
-  if (!Array.isArray(message.createdFiles) || !message.createdFiles.length) return message;
+  if (!Array.isArray(message.createdFiles) || !message.createdFiles.length)
+    return message;
   return {
     ...message,
-    createdFiles: message.createdFiles.map(({ files, ...artifact }) => artifact),
+    createdFiles: message.createdFiles.map(
+      ({ files, ...artifact }) => artifact,
+    ),
   };
 }
 function chatsForStorage() {
@@ -169,7 +200,7 @@ function persist() {
   if (!ok && !storageWarned) {
     storageWarned = true;
     showError(
-      "Не удалось сохранить историю: хранилище браузера недоступно или переполнено.",
+      "Could not save chat history: browser storage is unavailable or full.",
       false,
     );
   }

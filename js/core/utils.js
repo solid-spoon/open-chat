@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Утилиты ================= */
+/* ================= Utilities ================= */
 const $ = (s) => document.querySelector(s);
 const el = (tag, cls) => {
   const n = document.createElement(tag);
@@ -10,9 +10,7 @@ const el = (tag, cls) => {
 const uid = () =>
   crypto.randomUUID
     ? crypto.randomUUID()
-    : "id-" +
-      Date.now().toString(36) +
-      Math.random().toString(36).slice(2, 10);
+    : "id-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 const store = {
   get(s, k) {
     try {
@@ -35,27 +33,18 @@ const store = {
     } catch {}
   },
 };
-const plural = (n, one, few, many) => {
-  const a = Math.abs(n) % 100,
-    b = a % 10;
-  if (a > 10 && a < 20) return many;
-  if (b > 1 && b < 5) return few;
-  if (b === 1) return one;
-  return many;
-};
-const reducedMotion = matchMedia(
-  "(prefers-reduced-motion: reduce)",
-).matches;
+const plural = (n, singular, pluralForm) => (n === 1 ? singular : pluralForm);
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const isMobile = () => matchMedia("(max-width: 767px)").matches;
 const formatBytes = (n) => {
-  if (!n) return "0 Б";
-  const units = ["Б", "КБ", "МБ", "ГБ"];
+  if (!n) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
   const i = Math.min(
     units.length - 1,
     Math.floor(Math.log(n) / Math.log(1024)),
   );
   const v = n / Math.pow(1024, i);
-  return `${i === 0 || v >= 10 ? Math.round(v) : v.toFixed(1).replace(".", ",")} ${units[i]}`;
+  return `${i === 0 || v >= 10 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
 };
 
 async function copyText(text) {

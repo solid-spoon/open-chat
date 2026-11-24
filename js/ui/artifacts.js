@@ -1,6 +1,6 @@
 "use strict";
 
-/* ================= Панель артефактов ================= */
+/* ================= Artifact panel ================= */
 let activeArtifact = null;
 
 function showArtifact(source, kind) {
@@ -15,9 +15,10 @@ function showArtifact(source, kind) {
 function renderArtifactPreview() {
   if (!activeArtifact) return;
   const { source, kind } = activeArtifact;
-  artifactFrame.srcdoc = kind === "svg"
-    ? `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;min-height:100%;background:#fff;display:grid;place-items:center}svg{max-width:100%;max-height:100vh}</style></head><body>${source}</body></html>`
-    : source;
+  artifactFrame.srcdoc =
+    kind === "svg"
+      ? `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;min-height:100%;background:#fff;display:grid;place-items:center}svg{max-width:100%;max-height:100vh}</style></head><body>${source}</body></html>`
+      : source;
 }
 
 function selectArtifactTab(tab) {
@@ -38,7 +39,9 @@ function closeArtifact() {
 
 $("#artifactRefresh").addEventListener("click", renderArtifactPreview);
 $("#artifactClose").addEventListener("click", closeArtifact);
-artifactPreviewTab.addEventListener("click", () => selectArtifactTab("preview"));
+artifactPreviewTab.addEventListener("click", () =>
+  selectArtifactTab("preview"),
+);
 artifactCodeTab.addEventListener("click", () => selectArtifactTab("code"));
 $("#artifactDownload").addEventListener("click", () => {
   if (!activeArtifact) return;
